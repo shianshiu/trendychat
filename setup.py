@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="trendychat",
-    version="0.1",
+    version="0.2",
     packages=find_packages(),
     install_requires=[
         # 列出您的包的依賴項
