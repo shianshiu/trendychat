@@ -11,6 +11,16 @@ import openai
 from typing import Dict, List
 
 
+async def async_openai_reponse(messages: List[Dict], model_config: Dict):
+    try:
+        response = await openai.ChatCompletion.acreate(
+            messages=messages, **model_config
+        )
+    except Exception as e:
+        raise RuntimeError(f"An error occurred during OpenAI response: {str(e)}")
+    return response
+
+
 def openai_reponse(messages: List[Dict], model_config: Dict):
     try:
         response = openai.ChatCompletion.create(messages=messages, **model_config)

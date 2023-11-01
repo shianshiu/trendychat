@@ -12,11 +12,12 @@ TODO: Implement a simple chat that just returns the message
 - generate answer by chat model
 """
 import asyncio
+from functools import partial
 from langchain.vectorstores import MongoDBAtlasVectorSearch
 from trendychat.tools.db_connector import MongoSingleton
 from trendychat.prompt_manager.chat_prompt import ChatPrompt
 from trendychat.configs import EbeddingConfig, LLMConfig
-from trendychat.llm import openai_reponse, get_embedding_model
+from trendychat.llm import openai_reponse, async_openai_reponse, get_embedding_model
 import os
 from dotenv import load_dotenv
 
@@ -50,6 +51,15 @@ def get_relavent_contexts(message: str):
     return contexts
 
 
+async def get_relavent_contexts_async(message: str):
+    loop = asyncio.get_running_loop()
+    # 使用 functools.partial 包装同步函数及其参数
+    func = partial(get_relavent_contexts, message)
+    # 在执行器中运行同步函数
+    contexts = await loop.run_in_executor(None, func)
+    return contexts
+
+
 def reply_message(message: str, contexts: list):
     try:
         messages = ChatPrompt.get_message(message=message, context=contexts)
@@ -61,22 +71,32 @@ def reply_message(message: str, contexts: list):
     return message
 
 
+async def reply_message_async(message: str, contexts: list):
+    try:
+        messages = ChatPrompt.get_message(message=message, context=contexts)
+        model_config = gpt_config.get()
+        response = await async_openai_reponse(
+            messages=messages, model_config=model_config
+        )
+        # 从响应中提取出消息内容
+        return response["choices"][0]["message"]["content"]
+    except Exception as e:
+        raise RuntimeError(f"An error occurred during 'reply_message_async': {str(e)}")
+
+
 class SimpleChat:
     @classmethod
     def reply(cls, message):
         contexts = get_relavent_contexts(message=message)  # 確保這也是異步的
-        for cnt in contexts:
-            print(cnt)
+        # for cnt in contexts:
+        #     print(cnt)
         response = reply_message(message=message, contexts=contexts)
         return response["choices"][0]["message"]["content"]  # TODO:
-        # return response
 
-    # async def reply_async(self, message):
-    #     contexts = get_relavent_contexts(message=message)  # 確保這也是異步的
-    #     response = reply_message(message=message, contexts=contexts)
-    #     return response['choices'][0]['message']['content']
-
-    # @classmethod
-    # def reply(cls, message):
-    #     instance = cls()  # 創建一個SimpleChat實例
-    #     return asyncio.run(instance.reply_async(message))
+    @classmethod
+    async def async_reply(cls, message: str):
+        contexts = await get_relavent_contexts_async(message=message)  # 使用新的异步版本
+        response_content = await reply_message_async(
+            message=message, contexts=contexts
+        )  # 注意这里调用的是异步版本
+        return response_content
