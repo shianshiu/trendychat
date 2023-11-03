@@ -10,7 +10,7 @@ setup(
         "pymongo==4.5.0",
         "unstructured==0.10.22",
         "unstructured[docx]",
-        "unstructured[pdf]",
+        # "unstructured[pdf]",
         "azure-core==1.29.4",
         "azure-storage-blob==12.18.3",
         "tiktoken==0.5.1",
