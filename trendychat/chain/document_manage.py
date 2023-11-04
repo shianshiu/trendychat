@@ -18,7 +18,7 @@ from trendychat.document_storage import (
     refresh_storage_document_url,
     get_storage_file,
     delete_storage_file,
-    create_container
+    create_container,
 )
 from trendychat.vector_store import upload_file_to_vector_store
 from trendychat.configs import EbeddingConfig
@@ -29,6 +29,7 @@ import re
 import logging
 from tqdm import tqdm
 from pymongo.errors import CollectionInvalid, DuplicateKeyError, OperationFailure
+
 
 async def run_upload_tasks(tasks):
     await asyncio.gather(*tasks)
@@ -147,11 +148,10 @@ def create_collection_vector_store(db_name: str, collection_name: str):
 def create_collection_example(db_name: str, collection_name: str):
     STORAGE_ACCOUNT_NAME = os.environ.get("STORAGE_ACCOUNT_NAME")
     STORAGE_ACCOUNT_KEY = os.environ.get("STORAGE_ACCOUNT_KEY")
-    connection_string = f'DefaultEndpointsProtocol=https;AccountName={STORAGE_ACCOUNT_NAME};AccountKey={STORAGE_ACCOUNT_KEY};EndpointSuffix=core.windows.net'
+    connection_string = f"DefaultEndpointsProtocol=https;AccountName={STORAGE_ACCOUNT_NAME};AccountKey={STORAGE_ACCOUNT_KEY};EndpointSuffix=core.windows.net"
     container_name = os.environ.get("STORAGE_ACCOUNT_CONTAINER_DEMO_NAME")
 
-    create_container(container_name=container_name,
-                    connection_string=connection_string)
+    create_container(container_name=container_name, connection_string=connection_string)
 
     # Check if the data folder exists
     data_path = "./data"
@@ -174,7 +174,7 @@ def create_collection_example(db_name: str, collection_name: str):
         upload_local_document_to_storage(
             document_path=document_path,
             container_name=container_name,
-            connection_string=connection_string
+            connection_string=connection_string,
         )
 
         document_name = os.path.basename(document_path)
@@ -183,28 +183,34 @@ def create_collection_example(db_name: str, collection_name: str):
             container_name=container_name,
             account_name=STORAGE_ACCOUNT_NAME,
             account_key=STORAGE_ACCOUNT_KEY,
-            duration=24
+            duration=24,
         )
 
         # Create the collection if it doesn't exist
         try:
             db.create_collection(MONGODB_COLLECTION_EXAMPLE)
         except CollectionInvalid:
-            print(f"Collection {MONGODB_COLLECTION_EXAMPLE} already exists in {MONGODB_DATABASE_NAME}.")
+            print(
+                f"Collection {MONGODB_COLLECTION_EXAMPLE} already exists in {MONGODB_DATABASE_NAME}."
+            )
 
         TIMEZONE = os.environ.get("TIMEZONE")
         # The criteria based on which we'll decide to update or insert
         criteria = {"name": "demo_uploading"}
 
         # The new values that we want to set
-        new_values = {"$set": {"url": file_url,
-                               "document_name": document_name,
-                               "created_at": get_current_time(TIMEZONE),
-                               "updated_at": get_current_time(TIMEZONE)}}
+        new_values = {
+            "$set": {
+                "url": file_url,
+                "document_name": document_name,
+                "created_at": get_current_time(TIMEZONE),
+                "updated_at": get_current_time(TIMEZONE),
+            }
+        }
 
         # Using upsert to insert or update the document
-        collection.update_one(criteria, new_values, upsert=True)`
-    
+        collection.update_one(criteria, new_values, upsert=True)
+
 
 def create_collection_users(db_name: str, collection_name: str):
     # TODO: name\email\password\role_id
@@ -229,8 +235,6 @@ def create_collection_users(db_name: str, collection_name: str):
             print(f"Failed to create index on {index}: {str(e)}")
 
 
-
-
 class ManageDocuments:
     def __init__(self):
         _STORAGE_ACCOUNT_NAME = os.environ.get("STORAGE_ACCOUNT_NAME")
@@ -247,7 +251,7 @@ class ManageDocuments:
 
         self.mongodb_url = os.getenv("MONGODB_URI")
         self.mongodb_database = os.getenv("MONGODB_DATABASE_NANE")
-        self.mongodb_collection_users= os.getenv("MONGODB_COLLECTION_USERS")
+        self.mongodb_collection_users = os.getenv("MONGODB_COLLECTION_USERS")
         self.mongodb_collection_example = os.getenv("MONGODB_COLLECTION_EXAMPLE")
         self.mongodb_collection_roles = os.getenv("MONGODB_COLLECTION_ROLE")
         self.mongodb_collection_document_manager = os.getenv(
@@ -274,12 +278,11 @@ class ManageDocuments:
         )
         create_collection_example(
             db_name=self.mongodb_database,
-            collection_name=self.mongodb_collection_example
-            )
+            collection_name=self.mongodb_collection_example,
+        )
         create_collection_users(
-            db_name=self.mongodb_database,
-            collection_name=self.mongodb_collection_users
-            )
+            db_name=self.mongodb_database, collection_name=self.mongodb_collection_users
+        )
 
     async def async_upload_document(
         self, doc_name, doc_id, collection, doc_path=None, doc_content=None
