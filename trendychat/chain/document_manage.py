@@ -247,6 +247,7 @@ class ManageDocuments:
 
         self.mongodb_url = os.getenv("MONGODB_URI")
         self.mongodb_database = os.getenv("MONGODB_DATABASE_NANE")
+        self.mongodb_collection_users= os.getenv("MONGODB_COLLECTION_USERS")
         self.mongodb_collection_example = os.getenv("MONGODB_COLLECTION_EXAMPLE")
         self.mongodb_collection_roles = os.getenv("MONGODB_COLLECTION_ROLE")
         self.mongodb_collection_document_manager = os.getenv(
@@ -271,6 +272,14 @@ class ManageDocuments:
             db_name=self.mongodb_database,
             collection_name=self.mongodb_collection_vector,
         )
+        create_collection_example(
+            db_name=self.mongodb_database,
+            collection_name=self.mongodb_collection_example
+            )
+        create_collection_users(
+            db_name=self.mongodb_database,
+            collection_name=self.mongodb_collection_users
+            )
 
     async def async_upload_document(
         self, doc_name, doc_id, collection, doc_path=None, doc_content=None
