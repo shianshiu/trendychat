@@ -4,38 +4,6 @@ Date: 2023-09-25 14:59:13
 LastEditTime: 2023-10-20 17:49:33
 """
 
-
-""" 
-{
-    "_id": ObjectId(),  # MongoDB 產生的唯一識別碼
-    "document_name": str,   # 檔案名稱 (必須是唯一的)
-    "url": str,    # 檔案在 Azure Storage account 的 URL
-    "created_at": datetime,  # 檔案上傳日期和時間
-    "updated_at": datetime,  # 更新日期和時間
-    "user_name": str,   # 上傳檔案的使用者名稱
-    "source": str,      # 檔案來源 (例如: raw, processed)
-    "status_": str,      # 檔案的審核狀態 (例如: uploading, pending, approved, unapproved, processing, success, fail, deleting)  -> 刪掉該文檔是先改 deleting 然後等vector store 刪除成功後再刪除
-}
-
-{
-    "_id": ObjectId(),  # MongoDB 產生的唯一識別碼
-    "text": str,   # 檔案內容
-    "embedding": List[float],   # 檔案的向量表示
-    "document_id": ObjectId(), # 這是 reference 到 file_metadata 的 _id
-    "document_source": str,      # 檔案來源 (例如: raw, processed)
-    "document_name": str,   # 檔案名稱    
-    "source": str,      # langchain 原生的 source
-}
-
-
-"""
-
-
-# from langchain.embeddings.openai import OpenAIEmbeddings
-# from langchain.docstore.document import Document
-# from langchain.vectorstores import MongoDBAtlasVectorSearch
-
-
 from pymongo.errors import PyMongoError
 import time
 from datetime import datetime, timedelta
@@ -50,6 +18,7 @@ from trendychat.document_storage import (
     refresh_storage_document_url,
     get_storage_file,
     delete_storage_file,
+    create_container
 )
 from trendychat.vector_store import upload_file_to_vector_store
 from trendychat.configs import EbeddingConfig
@@ -59,14 +28,14 @@ import os
 import re
 import logging
 from tqdm import tqdm
-
+from pymongo.errors import CollectionInvalid, DuplicateKeyError, OperationFailure
 
 async def run_upload_tasks(tasks):
     await asyncio.gather(*tasks)
 
 
 def create_collection_role(db_name: str, collection_name: str):
-    from pymongo.errors import CollectionInvalid, DuplicateKeyError, OperationFailure
+    # from pymongo.errors import CollectionInvalid, DuplicateKeyError, OperationFailure
 
     client = MongoSingleton()
     db = client[db_name]
@@ -122,7 +91,7 @@ def create_collection_role(db_name: str, collection_name: str):
 
 
 def create_collection_document_manager(db_name: str, collection_name: str):
-    from pymongo.errors import CollectionInvalid, OperationFailure
+    # from pymongo.errors import CollectionInvalid, OperationFailure
 
     client = MongoSingleton()
     db = client[db_name]
@@ -152,7 +121,7 @@ def create_collection_document_manager(db_name: str, collection_name: str):
 
 
 def create_collection_vector_store(db_name: str, collection_name: str):
-    from pymongo.errors import CollectionInvalid, OperationFailure
+    # from pymongo.errors import CollectionInvalid, OperationFailure
 
     client = MongoSingleton()
     db = client[db_name]
@@ -173,6 +142,93 @@ def create_collection_vector_store(db_name: str, collection_name: str):
             collection.create_index(index)
         except OperationFailure as e:
             print(f"Failed to create index on {index}: {str(e)}")
+
+
+def create_collection_example(db_name: str, collection_name: str):
+    STORAGE_ACCOUNT_NAME = os.environ.get("STORAGE_ACCOUNT_NAME")
+    STORAGE_ACCOUNT_KEY = os.environ.get("STORAGE_ACCOUNT_KEY")
+    connection_string = f'DefaultEndpointsProtocol=https;AccountName={STORAGE_ACCOUNT_NAME};AccountKey={STORAGE_ACCOUNT_KEY};EndpointSuffix=core.windows.net'
+    container_name = os.environ.get("STORAGE_ACCOUNT_CONTAINER_DEMO_NAME")
+
+    create_container(container_name=container_name,
+                    connection_string=connection_string)
+
+    # Check if the data folder exists
+    data_path = "./data"
+    if not os.path.exists(data_path):
+        print("The data folder does not exist or there are no files to upload.")
+        return
+
+    MONGODB_URI = os.environ.get("MONGODB_URI")
+    MONGODB_DATABASE_NAME = db_name  # Fixed typo here
+    MONGODB_COLLECTION_EXAMPLE = collection_name  # Fixed typo here
+
+    client = MongoSingleton(MONGODB_URI)
+    db = client[MONGODB_DATABASE_NAME]
+    collection = db[MONGODB_COLLECTION_EXAMPLE]
+
+    # Assuming there might be multiple files to upload, we'll loop through the directory
+    # Assuming there might be multiple files to upload, we'll loop through the directory
+    for file in os.listdir(data_path):
+        document_path = os.path.join(data_path, file)
+        upload_local_document_to_storage(
+            document_path=document_path,
+            container_name=container_name,
+            connection_string=connection_string
+        )
+
+        document_name = os.path.basename(document_path)
+        file_url = refresh_storage_document_url(
+            document_name=document_name,
+            container_name=container_name,
+            account_name=STORAGE_ACCOUNT_NAME,
+            account_key=STORAGE_ACCOUNT_KEY,
+            duration=24
+        )
+
+        # Create the collection if it doesn't exist
+        try:
+            db.create_collection(MONGODB_COLLECTION_EXAMPLE)
+        except CollectionInvalid:
+            print(f"Collection {MONGODB_COLLECTION_EXAMPLE} already exists in {MONGODB_DATABASE_NAME}.")
+
+        TIMEZONE = os.environ.get("TIMEZONE")
+        # The criteria based on which we'll decide to update or insert
+        criteria = {"name": "demo_uploading"}
+
+        # The new values that we want to set
+        new_values = {"$set": {"url": file_url,
+                               "document_name": document_name,
+                               "created_at": get_current_time(TIMEZONE),
+                               "updated_at": get_current_time(TIMEZONE)}}
+
+        # Using upsert to insert or update the document
+        collection.update_one(criteria, new_values, upsert=True)`
+    
+
+def create_collection_users(db_name: str, collection_name: str):
+    # TODO: name\email\password\role_id
+    client = MongoSingleton()
+    db = client[db_name]
+
+    # 嘗試創建集合
+    try:
+        db.create_collection(collection_name)
+    except CollectionInvalid:
+        print(f"Collection {collection_name} already exists in {db_name}.")
+
+    collection = db[collection_name]
+
+    # 為欄位建立索引
+    indexes = ["name", "email", "password", "role_id"]
+
+    for index in indexes:
+        try:
+            collection.create_index(index)
+        except OperationFailure as e:
+            print(f"Failed to create index on {index}: {str(e)}")
+
+
 
 
 class ManageDocuments:
