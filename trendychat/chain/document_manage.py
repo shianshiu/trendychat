@@ -35,11 +35,12 @@ async def run_upload_tasks(tasks):
     await asyncio.gather(*tasks)
 
 
-def create_collection_role(db_name: str, collection_name: str):
+def create_collection_role(db_name: str, collection_name: str, mongodb_url=None):
     # from pymongo.errors import CollectionInvalid, DuplicateKeyError, OperationFailure
 
-    client = MongoSingleton()
+    client = MongoSingleton(mongodb_url)
     db = client[db_name]
+
     TIMEZONE = os.getenv("TIMEZONE")
 
     # 嘗試創建集合
@@ -91,10 +92,12 @@ def create_collection_role(db_name: str, collection_name: str):
                 print(f"An error occurred while inserting role {role_name}: {str(e)}")
 
 
-def create_collection_document_manager(db_name: str, collection_name: str):
+def create_collection_document_manager(
+    db_name: str, collection_name: str, mongodb_url=None
+):
     # from pymongo.errors import CollectionInvalid, OperationFailure
 
-    client = MongoSingleton()
+    client = MongoSingleton(mongodb_url)
     db = client[db_name]
 
     # 嘗試創建集合
@@ -121,10 +124,12 @@ def create_collection_document_manager(db_name: str, collection_name: str):
             print(f"Failed to create index on {index}: {str(e)}")
 
 
-def create_collection_vector_store(db_name: str, collection_name: str):
+def create_collection_vector_store(
+    db_name: str, collection_name: str, mongodb_url=None
+):
     # from pymongo.errors import CollectionInvalid, OperationFailure
 
-    client = MongoSingleton()
+    client = MongoSingleton(mongodb_url)
     db = client[db_name]
 
     # 嘗試創建集合
@@ -145,7 +150,9 @@ def create_collection_vector_store(db_name: str, collection_name: str):
             print(f"Failed to create index on {index}: {str(e)}")
 
 
-def create_collection_example(db_name: str, collection_name: str):
+def create_collection_example(
+    db_name: str, collection_name: str, data_path: str, mongodb_url=None
+):
     STORAGE_ACCOUNT_NAME = os.environ.get("STORAGE_ACCOUNT_NAME")
     STORAGE_ACCOUNT_KEY = os.environ.get("STORAGE_ACCOUNT_KEY")
     connection_string = f"DefaultEndpointsProtocol=https;AccountName={STORAGE_ACCOUNT_NAME};AccountKey={STORAGE_ACCOUNT_KEY};EndpointSuffix=core.windows.net"
@@ -154,21 +161,23 @@ def create_collection_example(db_name: str, collection_name: str):
     create_container(container_name=container_name, connection_string=connection_string)
 
     # Check if the data folder exists
-    data_path = "./data"
+
+    data_path = data_path if data_path else ""
     if not os.path.exists(data_path):
         print("The data folder does not exist or there are no files to upload.")
         return
 
-    MONGODB_URI = os.environ.get("MONGODB_URI")
+    # MONGODB_URI = os.environ.get("MONGODB_URI")
     MONGODB_DATABASE_NAME = db_name  # Fixed typo here
     MONGODB_COLLECTION_EXAMPLE = collection_name  # Fixed typo here
 
-    client = MongoSingleton(MONGODB_URI)
+    client = MongoSingleton(mongodb_url)
     db = client[MONGODB_DATABASE_NAME]
     collection = db[MONGODB_COLLECTION_EXAMPLE]
 
     # Assuming there might be multiple files to upload, we'll loop through the directory
     # Assuming there might be multiple files to upload, we'll loop through the directory
+
     for file in os.listdir(data_path):
         document_path = os.path.join(data_path, file)
         upload_local_document_to_storage(
@@ -212,11 +221,9 @@ def create_collection_example(db_name: str, collection_name: str):
         collection.update_one(criteria, new_values, upsert=True)
 
 
-def create_collection_users(db_name: str, collection_name: str):
-    # TODO: name\email\password\role_id
-    client = MongoSingleton()
+def create_collection_users(db_name: str, collection_name: str, mongodb_url=None):
+    client = MongoSingleton(mongodb_url)
     db = client[db_name]
-
     # 嘗試創建集合
     try:
         db.create_collection(collection_name)
@@ -264,24 +271,36 @@ class ManageDocuments:
         self.document_chunk_size = int(os.getenv("DOCUMENT_CHUNK_SIZE"))
         self.document_chunk_overlap = int(os.getenv("DOCUMENT_CHUNK_OVERLAP"))
 
-    def init_database(self):
+    def init_database(self, data_path=None):
+        # print(
+        #     "create collections: role, document_manager, vector_store, example, users"
+        # )
         create_collection_role(
-            db_name=self.mongodb_database, collection_name=self.mongodb_collection_roles
+            db_name=self.mongodb_database,
+            collection_name=self.mongodb_collection_roles,
+            mongodb_url=self.mongodb_url,
         )
         create_collection_document_manager(
             db_name=self.mongodb_database,
             collection_name=self.mongodb_collection_document_manager,
+            mongodb_url=self.mongodb_url,
         )
         create_collection_vector_store(
             db_name=self.mongodb_database,
             collection_name=self.mongodb_collection_vector,
+            mongodb_url=self.mongodb_url,
         )
         create_collection_example(
             db_name=self.mongodb_database,
             collection_name=self.mongodb_collection_example,
+            mongodb_url=self.mongodb_url,
+            data_path=data_path,
         )
+
         create_collection_users(
-            db_name=self.mongodb_database, collection_name=self.mongodb_collection_users
+            db_name=self.mongodb_database,
+            collection_name=self.mongodb_collection_users,
+            mongodb_url=self.mongodb_url,
         )
 
     async def async_upload_document(
