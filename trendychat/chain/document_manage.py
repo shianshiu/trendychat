@@ -96,6 +96,12 @@ def create_collection_document_manager(
     db_name: str, collection_name: str, mongodb_url=None
 ):
     # from pymongo.errors import CollectionInvalid, OperationFailure
+    STORAGE_ACCOUNT_NAME = os.environ.get("STORAGE_ACCOUNT_NAME")
+    STORAGE_ACCOUNT_KEY = os.environ.get("STORAGE_ACCOUNT_KEY")
+    connection_string = f"DefaultEndpointsProtocol=https;AccountName={STORAGE_ACCOUNT_NAME};AccountKey={STORAGE_ACCOUNT_KEY};EndpointSuffix=core.windows.net"
+    container_name = os.environ.get("STORAGE_ACCOUNT_CONTAINER_NAME")
+
+    create_container(container_name=container_name, connection_string=connection_string)
 
     client = MongoSingleton(mongodb_url)
     db = client[db_name]
