@@ -30,7 +30,7 @@ def promt_function(
     company = os.getenv("COMPANY_NAME")
     model_base = os.getenv("MODEL_BASE")
     direct_url = os.getenv("MODEL_BASE")
-    custom_prompt = os.getenv("CUSTOM_PROMPT")
+
     if version == "v1":
         # 最簡短的說明
         ref = {
@@ -68,6 +68,7 @@ def promt_function(
             "assistant": "---" + "\n\n".join(["---\n\n" + ctxt for ctxt in context]),
         }
     elif version == "v5":
+        custom_prompt = os.getenv("CUSTOM_PROMPT")
         custom_prompt = (
             custom_prompt
             if custom_prompt
