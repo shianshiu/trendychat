@@ -30,6 +30,7 @@ def promt_function(
     company = os.getenv("COMPANY_NAME")
     model_base = os.getenv("MODEL_BASE")
     direct_url = os.getenv("MODEL_BASE")
+    custom_prompt = os.getenv("CUSTOM_PROMPT")
     if version == "v1":
         # 最簡短的說明
         ref = {
@@ -66,6 +67,17 @@ def promt_function(
             "system": f"""You're an AI assistant of {company}, please refer to the reference and provide a response in JSON format only, like this: {{"confidence":"-1","answer":"尚未提供，請提供更多的細節"}} Here,(1)confidence: Indicates whether there is an ability to answer this time, divided into integer -1 for certain no, 0 for uncertain, and 1 for certain yes,(2)answer: The content of the response. If there's no corresponding answer, ask for more specific information. If there is a relevant answer, including the URL from the reference is important.""",
             "assistant": "---" + "\n\n".join(["---\n\n" + ctxt for ctxt in context]),
         }
+    elif version == "v5":
+        custom_prompt = (
+            custom_prompt
+            if custom_prompt
+            else "You're an AI assistant.Please reply based on the reference of knowledge."
+        )
+        # 較新的說明
+        ref = {
+            "system": custom_prompt,
+            "assistant": f"Based on my knowledge: {' '.join([f'From Document {i+1}: {ctxt}' for i, ctxt in enumerate(context)])}.",
+        }
 
     print("目前使用prompt的版本: ", version)
     return ref
@@ -74,7 +86,7 @@ def promt_function(
 class ChatPrompt:
     @classmethod
     def get_message(self, message: str, context: List[str]):
-        prompt = promt_function(context=context, version="v2")
+        prompt = promt_function(context=context, version="v5")
 
         return [
             {"role": "system", "content": prompt["system"]},
