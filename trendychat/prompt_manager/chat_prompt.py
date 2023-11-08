@@ -86,7 +86,7 @@ def promt_function(
 class ChatPrompt:
     @classmethod
     def get_message(self, message: str, context: List[str]):
-        prompt = promt_function(context=context, version="v5")
+        prompt = promt_function(context=context, version="v3")
 
         return [
             {"role": "system", "content": prompt["system"]},
