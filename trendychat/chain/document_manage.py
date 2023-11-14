@@ -9,7 +9,7 @@ import time
 from datetime import datetime, timedelta
 import asyncio
 from trendychat.tools.db_connector import MongoSingleton
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Union
 from trendychat.tools.timer import get_current_time
 from trendychat.tools.token_counter import count_token_number
 from trendychat.document_storage import (
@@ -678,7 +678,7 @@ class ManageDocuments:
         self,
         document_id: str = None,
         document_name: str = None,
-        status: str = None,
+        status: Union[str, List[str]] = None,
         source: str = None,
         user_name: str = None,
         start_date: str = None,
@@ -717,8 +717,15 @@ class ManageDocuments:
         if document_name:
             regex_pattern = re.compile(f".*{document_name}.*", re.IGNORECASE)
             filter_condition["document_name"] = regex_pattern
+
         if status:
-            filter_condition["status"] = status
+            if isinstance(status, list):
+                filter_condition["status"] = {
+                    "$in": status
+                }  # 當 status 為列表時，使用 $in 來匹配任何列表中的值
+            else:
+                filter_condition["status"] = status  # 當 status 為字串時，直接匹配該值
+
         if source:
             filter_condition["source"] = source
         if user_name:
