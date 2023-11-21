@@ -13,9 +13,11 @@ trendychat.egg-info/requires.txt
 trendychat.egg-info/top_level.txt
 trendychat/chain/__init__.py
 trendychat/chain/document_manage.py
+trendychat/chain/memory_chat.py
 trendychat/chain/simple_chat.py
 trendychat/prompt_manager/__init__.py
 trendychat/prompt_manager/chat_prompt.py
+trendychat/prompt_manager/chat_prompt_v2.py
 trendychat/prompt_manager/doc_transform_prompt.py
 trendychat/tools/__init__.py
 trendychat/tools/db_connector.py
