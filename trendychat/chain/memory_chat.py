@@ -35,7 +35,7 @@ gpt_config = LLMConfig()
 REFERENCE_NUMBER = int(os.getenv("REFERENCE_NUMBER", "3"))
 
 
-def get_relavent_contexts(text: str):
+def get_relavent_contexts(text: str, num_references: int = REFERENCE_NUMBER):
     try:
         db_name = os.getenv("MONGODB_DATABASE_NANE")
         collection_name = os.getenv("MONGODB_COLLECTION_VECTOR")
@@ -49,7 +49,7 @@ def get_relavent_contexts(text: str):
         vectorstore = MongoDBAtlasVectorSearch(
             collection=collection, embedding=embeddings, index_name=index_name
         )
-        documents = vectorstore.similarity_search(query=text, k=REFERENCE_NUMBER)
+        documents = vectorstore.similarity_search(query=text, k=num_references)
         reference = []
         context = []
 
@@ -81,10 +81,12 @@ def get_relavent_contexts(text: str):
     return pack
 
 
-async def get_relavent_contexts_async(text: str):
+async def get_relavent_contexts_async(
+    text: str, num_references: int = REFERENCE_NUMBER
+):
     loop = asyncio.get_running_loop()
     # 使用 functools.partial 包装同步函数及其参数
-    func = partial(get_relavent_contexts, text)
+    func = partial(get_relavent_contexts, text, num_references)
     # 在执行器中运行同步函数
     pack = await loop.run_in_executor(None, func)
     return pack
@@ -121,10 +123,21 @@ async def reply_message_async(user_text: str, history: List[str], context: List[
 class MemoryChat:
     @classmethod
     def reply(cls, chat_message: MemoryMessage) -> MemoryMessage:
-        text = str(chat_message.history + chat_message.user_text)
-        pack = get_relavent_contexts(text=text)  # 確保這也是異步的
-        chat_message.context = pack.get("context", [])
-        chat_message.reference = pack.get("reference", [])
+        text = str(chat_message.user_text)
+        pack = get_relavent_contexts(text=text, num_references=3)
+        context = pack.get("context", [])
+        reference = pack.get("reference", [])
+
+        if REFERENCE_NUMBER > 3:
+            EXTRA_NUMBER = REFERENCE_NUMBER - 3
+            text = str(chat_message.history + [chat_message.user_text])
+            subpack = get_relavent_contexts(
+                text=text, num_references=EXTRA_NUMBER
+            )  # 這邊要修正成只選EXTRA_NUMBER個
+            context += subpack.get("context", [])
+            reference += subpack.get("reference", [])
+        chat_message.context = context
+        chat_message.reference = reference
 
         response = reply_message(
             user_text=chat_message.user_text,
@@ -137,10 +150,23 @@ class MemoryChat:
 
     @classmethod
     async def async_reply(cls, chat_message: MemoryMessage) -> MemoryMessage:
-        text = str(chat_message.history + [chat_message.user_text])
-        pack = await get_relavent_contexts_async(text=text)
-        chat_message.context = pack.get("context", [])
-        chat_message.reference = pack.get("reference", [])
+        text = chat_message.user_text
+        pack = await get_relavent_contexts_async(text=text, num_references=3)
+        context = pack.get("context", [])
+        reference = pack.get("reference", [])
+
+        if REFERENCE_NUMBER > 3:
+            EXTRA_NUMBER = REFERENCE_NUMBER - 3
+            text = chat_message.user_text
+            text = str(chat_message.history + [chat_message.user_text])
+            subpack = await get_relavent_contexts_async(
+                text=text, num_references=EXTRA_NUMBER
+            )
+            context += subpack.get("context", [])
+            reference += subpack.get("reference", [])
+
+        chat_message.context = context
+        chat_message.reference = reference
 
         response = await reply_message_async(
             user_text=chat_message.user_text,
