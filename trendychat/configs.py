@@ -22,7 +22,9 @@ class LLMConfig:
         frequency_penalty: float = 0,
         presence_penalty: float = 0,
         stop: Optional[List[str]] = None,
+        json_format=False,
     ) -> None:
+        # response_format = {"type": "json_object"}
         self.model_params = {
             "temperature": temperature,
             "max_tokens": max_tokens,
@@ -31,7 +33,12 @@ class LLMConfig:
             "presence_penalty": presence_penalty,
             "stop": stop,
         }
-        llm_params = os.environ.get("LLM_CANDIDATES")
+        if json_format:
+            self.model_params["response_format"] = {"type": "json_object"}
+            llm_params = os.environ.get("LLM_JSON_CANDIDATES")
+        else:
+            llm_params = os.environ.get("LLM_CANDIDATES")
+
         llm_params = json2parameters(llm_params)
         if not config:
             num = len(llm_params)
@@ -64,7 +71,7 @@ class LLMConfig:
         random_key = random.choice(list(self.config.keys()))
         selected_config = self.config[random_key]
 
-        print(f"Selected config at LLM name: {random_key}")
+        # print(f"Selected config at LLM name: {random_key}")
 
         merged_config = {**selected_config, **self.model_params}
         return merged_config
@@ -106,7 +113,7 @@ class EbeddingConfig:
         random_key = random.choice(list(self.config.keys()))
         selected_config = self.config[random_key]
 
-        print(f"Selected config at Embedding index: {random_key}")
+        # print(f"Selected config at Embedding index: {random_key}")
 
         merged_config = {**selected_config, **self.model_params}
         return merged_config
