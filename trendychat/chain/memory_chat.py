@@ -1,3 +1,4 @@
+import time
 import os
 import asyncio
 from functools import partial
@@ -110,6 +111,7 @@ async def reply_message_async(user_text: str, history: List[str], context: List[
         messages = ChatPrompt.get_message(
             user_text=user_text, history=history, context=context
         )
+        # print("\nmessages\n:", messages, "\n")
         model_config = gpt_config.get()
         messages = await async_openai_reponse(
             messages=messages, model_config=model_config
@@ -151,28 +153,45 @@ class MemoryChat:
     @classmethod
     async def async_reply(cls, chat_message: MemoryMessage) -> MemoryMessage:
         text = chat_message.user_text
-        pack = await get_relavent_contexts_async(text=text, num_references=3)
-        context = pack.get("context", [])
-        reference = pack.get("reference", [])
+        EXTRA_NUMBER = max(REFERENCE_NUMBER - 3, 0)
 
-        if REFERENCE_NUMBER > 3:
-            EXTRA_NUMBER = REFERENCE_NUMBER - 3
-            text = chat_message.user_text
-            text = str(chat_message.history + [chat_message.user_text])
-            subpack = await get_relavent_contexts_async(
-                text=text, num_references=EXTRA_NUMBER
+        # start_time = time.perf_counter()  # TODO: 開始計時
+        # 根据 EXTRA_NUMBER 是否大于0来决定是否进行第二次查询
+        if EXTRA_NUMBER > 0:
+            # 用于构建第二次调用的文本
+            combined_text = " ".join(chat_message.history + [text])
+
+            # 同时进行两次查询
+            pack, subpack = await asyncio.gather(
+                get_relavent_contexts_async(text=text, num_references=3),
+                get_relavent_contexts_async(
+                    text=combined_text, num_references=EXTRA_NUMBER
+                ),
             )
-            context += subpack.get("context", [])
-            reference += subpack.get("reference", [])
+        else:
+            # 只进行一次查询
+            pack = await get_relavent_contexts_async(text=text, num_references=3)
+            subpack = {"context": [], "reference": []}
+
+        # context_time = time.perf_counter()  # TODO: 计时结束
+        # print(f"Context generation time: {context_time - start_time:.2f} seconds")
+
+        # 合并结果
+        context = pack.get("context", []) + subpack.get("context", [])
+        reference = pack.get("reference", []) + subpack.get("reference", [])
 
         chat_message.context = context
         chat_message.reference = reference
 
+        # start_time = time.perf_counter()  # TODO: 開始計時
         response = await reply_message_async(
-            user_text=chat_message.user_text,
-            history=chat_message.history,
-            context=chat_message.context,
-        )  # 注意这里调用的是异步版本
+            user_text=text, history=chat_message.history, context=context
+        )
+        # reply_time = time.perf_counter()  # TODO: 计时结束
+        # print(
+        #     f"Reply generation time: {reply_time - start_time:.2f} seconds"
+        # )  # TODO: 计时结束
+
         chat_message.bot_timestamp = datetime.now()
         chat_message.bot_text = response["choices"][0]["message"]["content"]
         return chat_message
