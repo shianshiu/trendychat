@@ -14,11 +14,12 @@ Install Trendychat using pip:
 
 ```bash
 pip install trendychat
-
+```
 If you need to process PDF files, the unstructured package with PDF support must be installed separately due to its large size:
 
 ```bash
 pip install unstructured"[pdf]"
+```
 
 ## Design Philosophy
 
