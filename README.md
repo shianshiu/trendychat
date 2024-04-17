@@ -26,3 +26,10 @@ pip install unstructured"[pdf]"
 
 Inspired by the design principles of Langchain, Trendychat focuses on efficient data handling and processing. However, due to the rapid iteration in model API applications and the challenges of high dependency and maintenance in such environments, Trendychat has been architected with a redesigned approach to reduce dependency issues and ease maintenance.
 
+
+## Architecture Diagram
+
+Below is the architectural diagram illustrating the supported structure and flow of interactions within Trendychat. This visualization helps in understanding how different components are integrated.
+
+![Architecture Diagram](images/architecture.png)
+
