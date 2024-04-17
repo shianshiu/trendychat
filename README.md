@@ -24,7 +24,11 @@ pip install unstructured"[pdf]"
 
 ## Design Philosophy
 
-Inspired by the design principles of Langchain, Trendychat focuses on efficient data handling and processing. However, due to the rapid iteration in model API applications and the challenges of high dependency and maintenance in such environments, Trendychat has been architected with a redesigned approach to reduce dependency issues and ease maintenance.
+Trendychat is partly inspired by the design principles of [Langchain](https://github.com/langchain-ai), especially in the areas of data processing and content management. We adopt established methodologies to ensure robust and efficient handling of digital content and data workflows.
+
+However, recognizing the rapid evolution in model API interactions, chain logic, and agent architectures, Trendychat diverges significantly in these aspects. Our library has been designed from the ground up to support flexible, rapid development and easy maintenance. We prioritize modularity and low dependency to adapt swiftly to changing requirements and new opportunities in model integration. This approach helps in avoiding the maintenance challenges and dependency issues commonly faced in fast-paced development environments.
+
+By crafting a hybrid design that blends proven principles with innovative practices, Trendychat aims to provide a stable yet adaptable foundation for building and scaling LLM applications.
 
 
 ## Architecture Diagram
