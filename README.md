@@ -4,9 +4,10 @@ Trendychat is a core library designed to support applications utilizing large la
 
 ## Features
 
-- **Content Management System (CMS)**: For organizing and managing digital content.
-- **ETL Scheduling**: Automate the extraction, transformation, and loading of data.
-- **Bot Interactions**: Facilitate automated responses and user interaction through bots.
+Trendychat powers several key services by providing the necessary backend support:
+- **Content Management System (CMS)**: Facilitates the organization and management of digital content, which is crucial for dynamic LLM applications.
+- **ETL Scheduling**: Automates the extraction, transformation, and loading of data to ensure that the LLMs have timely and relevant data feeds.
+- **Bot Interactions**: Supports automated responses and user interactions through intelligent bots, enhancing the user experience and engagement.
 
 ## Installation
 
