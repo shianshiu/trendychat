@@ -31,5 +31,5 @@ Inspired by the design principles of Langchain, Trendychat focuses on efficient 
 
 Below is the architectural diagram illustrating the supported structure and flow of interactions within Trendychat. This visualization helps in understanding how different components are integrated.
 
-![Architecture Diagram](images/architecture.png)
+![Architecture Diagram](pic/architecture.png)
 
